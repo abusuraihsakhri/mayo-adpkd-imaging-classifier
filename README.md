@@ -1,6 +1,6 @@
 # Mayo Adpkd Imaging Classifier
 
-> **Domain:** Clinical Decision Support & Biomedical Computing  
+> **Domain:** Clinical Decision Support & Biomedical Computing
 > **Reference Guidelines & Standards:** `Standard Clinical Formulations & ISO/IEC Quality Frameworks`
 
 <div align="center">
@@ -33,8 +33,8 @@ License: MIT
 
 - **`calculate_metrics()`**: Core domain algorithm for mayo-adpkd-imaging-classifier.
 - **`process_single()`** — calculates and validates process_single parameters.
-- **`process_batch()`** — calculates and validates process_batch parameters.
-- **`main()`** — calculates and validates main parameters.
+- **`process_batch()`** — calculates and validates process_batch parameters with file validation.
+- **`main()`** — CLI entry point for single and batch operations.
 
 ---
 
@@ -49,27 +49,58 @@ License: MIT
 
 ---
 
-## 💻 CLI Quickstart & Usage
+## 💻 Installation
 
-### 1. Guided Interactive Mode
 ```bash
-python cli.py
+# Clone the repository
+git clone https://github.com/abusuraihsakhri/mayo-adpkd-imaging-classifier.git
+cd mayo-adpkd-imaging-classifier
+
+# Install dependencies
+pip install -e .
+
+# For API server support
+pip install -e ".[api]"
+
+# For development (includes testing)
+pip install -e ".[dev]"
 ```
 
-### 2. Direct Parameterized Evaluation
+---
+
+## 💻 CLI Quickstart & Usage
+
+### 1. Single Case Evaluation
 ```bash
-python cli.py --task-id <value> --target <value> --primary <value> --secondary <value>
+python cli.py single --v1 14.5 --v2 4.2 --v3 1.8
+```
+
+### 2. Batch CSV Processing
+```bash
+python cli.py batch -i sample.csv -o results.csv
+```
+
+### 3. Enterprise Supervisor Mode
+```bash
+# Set the audit security key (required)
+export AUDIT_SECRET_KEY="your-secure-key-here-min-16-chars"
+
+# Run audit evaluation
+python cli.py audit --task-id TASK-001 --primary 28.5 --secondary 14.2
+
+# Verify audit trail integrity
+python cli.py verify-audit
+
+# Launch FastAPI REST server
+python cli.py serve --host 127.0.0.1 --port 8000
 ```
 
 ### Parameter Reference
-- `--task-id`: Specifies input measurement or parameter value.
-- `--target`: Specifies input measurement or parameter value.
-- `--primary`: Specifies input measurement or parameter value.
-- `--secondary`: Specifies input measurement or parameter value.
-- `--critical`: Specifies input measurement or parameter value.
-- `--status`: Specifies input measurement or parameter value.
-- `--input`: Specifies input measurement or parameter value.
-- `--output`: Specifies input measurement or parameter value.
+- `--v1`: Primary parameter (float, default: 10.0)
+- `--v2`: Secondary parameter (float, default: 5.0)
+- `--v3`: Tertiary parameter (float, default: 2.0)
+- `-i, --input`: Input CSV file path (required for batch)
+- `-o, --output`: Output CSV file path (default: results.csv)
 
 ### Input Data Schema
 
@@ -85,10 +116,17 @@ python cli.py --task-id <value> --target <value> --primary <value> --secondary <
 ## 🛡️ Security & Enterprise Architecture
 
 * **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
+* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition. Requires `AUDIT_SECRET_KEY` environment variable.
 * **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
-* **Active Learning Bayesian Calibration:** Dynamic tracker updating worker reliability weights and monitoring Brier calibration drift.
 * **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
+
+### Security Configuration
+
+The `AUDIT_SECRET_KEY` environment variable is **required** for audit trail operations. Generate a secure key:
+
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
 
 ---
 
@@ -112,5 +150,35 @@ python simulator.py --tasks 1000 --concurrency 8
 
 ```bash
 docker build -t mayo-adpkd-imaging-classifier .
-docker run -p 8000:8000 mayo-adpkd-imaging-classifier
+docker run -p 8000:8000 -e AUDIT_SECRET_KEY="your-secure-key" mayo-adpkd-imaging-classifier
+```
+
+---
+
+## 📁 Project Structure
+
+```
+mayo-adpkd-imaging-classifier/
+├── agents/                  # Enterprise agent modules
+│   ├── __init__.py         # Package initialization
+│   ├── api.py              # FastAPI REST server
+│   ├── base.py             # Security, PHI guard, HMAC audit
+│   ├── llm_factory.py      # LLM provider factory
+│   ├── models.py           # Pydantic data models
+│   ├── supervisor.py       # Supervisor orchestrator
+│   └── workers.py          # Specialized domain workers
+├── tests/                  # Test suite
+│   ├── test_enrichment.py  # Enrichment module tests
+│   └── test_mayo_adpkd_imaging_classifier.py  # Core tests
+├── web/                    # Web dashboard
+│   └── index.html          # Operations console
+├── mayo_adpkd.py           # Core classification algorithm
+├── cli.py                  # Command-line interface
+├── enrichment.py           # Enrichment feature engines
+├── simulator.py            # High-throughput simulator
+├── sample.csv              # Sample input data
+├── benchmark_dataset.json  # Benchmark test cases
+├── pyproject.toml          # Project configuration
+├── Dockerfile              # Container definition
+└── docker-compose.yml      # Docker Compose configuration
 ```

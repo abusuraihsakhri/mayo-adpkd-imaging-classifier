@@ -3,9 +3,13 @@ Automated Pytest Test Suite for Mayo Adpkd Imaging Classifier.
 Domain: Clinical & Biomedical AI
 Standard: CAP / CLSI / ISO Standards
 """
+import os
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Set secure audit key for testing (must be at least 16 chars)
+os.environ.setdefault("AUDIT_SECRET_KEY", "test-audit-secret-key-for-pytest-2026")
 
 import pytest
 from agents.base import PHIGuard, AuditLogger, SecurityException
@@ -63,3 +67,22 @@ def test_supervisor_consensus_and_audit():
     assert main(["audit", "--task-id", "CLI-TEST-01"]) == 0
     assert main(["chat", "Explain", "specifications"]) == 0
     assert main(["verify-audit"]) == 0
+
+
+def test_audit_trail_requires_secret_key():
+    """Verify that AuditTrail raises EnvironmentError when AUDIT_SECRET_KEY is not set."""
+    from agents.base import AuditTrail
+    original_key = os.environ.pop("AUDIT_SECRET_KEY", None)
+    try:
+        with pytest.raises(EnvironmentError, match="AUDIT_SECRET_KEY"):
+            AuditTrail()
+    finally:
+        if original_key:
+            os.environ["AUDIT_SECRET_KEY"] = original_key
+
+
+def test_audit_trail_rejects_short_key():
+    """Verify that AuditTrail rejects short keys."""
+    from agents.base import AuditTrail
+    with pytest.raises(ValueError, match="at least 16 characters"):
+        AuditTrail(secret_key="short")

@@ -66,9 +66,19 @@ def process_single(args) -> None:
 
 
 def process_batch(input_csv: str, output_csv: str) -> None:
+    import os
+    if not os.path.isfile(input_csv):
+        raise FileNotFoundError(f"Input CSV file not found: {input_csv}")
+
+    output_dir = os.path.dirname(os.path.abspath(output_csv))
+    if output_dir and not os.path.isdir(output_dir):
+        raise FileNotFoundError(f"Output directory does not exist: {output_dir}")
+
     with open(input_csv, mode="r", encoding="utf-8-sig") as f:
         reader = csv.DictReader(f)
         fieldnames = list(reader.fieldnames or [])
+        if not fieldnames:
+            raise ValueError(f"Input CSV file is empty or has no headers: {input_csv}")
         rows = list(reader)
 
     out_fields = fieldnames + ["score", "classification", "clinical_recommendation"]
