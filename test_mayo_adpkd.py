@@ -104,7 +104,7 @@ def test_cli_single(capsys):
 def test_csv_output_escapes_spreadsheet_formulas(tmp_path):
     source = tmp_path / "source.csv"
     output = tmp_path / "output.csv"
-    source.write_text('case_id,age,httkv_ml_per_m\\n"=SUM(1,2)",40,800\\n')
+    source.write_text('case_id,age,httkv_ml_per_m\n"=SUM(1,2)",40,800\n')
     process_batch(source, output)
     with output.open(newline="", encoding="utf-8") as stream:
         row = next(csv.DictReader(stream))
