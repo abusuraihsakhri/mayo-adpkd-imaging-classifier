@@ -30,8 +30,9 @@
     if (morphology === "atypical") return result;
     const growth = 100 * Math.expm1(Math.log(httkv / 150) / age);
     result.estimated_annual_growth_percent = Math.round(growth * 10000) / 10000;
-    result.mayo_class = growth < 1.5 ? "1A" : growth < 3 ? "1B" :
-      growth < 4.5 ? "1C" : growth < 6 ? "1D" : "1E";
+    const threshold = rate => 150 * Math.pow(1 + rate / 100, age);
+    result.mayo_class = httkv < threshold(1.5) ? "1A" : httkv < threshold(3) ? "1B" :
+      httkv < threshold(4.5) ? "1C" : httkv < threshold(6) ? "1D" : "1E";
     return result;
   }
   function parseCSV(text) {
