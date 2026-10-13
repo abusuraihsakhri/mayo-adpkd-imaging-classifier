@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mayo-adpkd-imaging-classifier"
-version = "3.0.0"
-description = "Mayo Imaging Classification for ADPKD - Estimates future eGFR decline from height-adjusted total kidney volume (HtTKV)."
+version = "4.0.0"
+description = "Age-adjusted Mayo Imaging Classification (1A–1E) for typical ADPKD based on htTKV."
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
