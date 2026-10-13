@@ -1,184 +1,74 @@
-# Mayo Adpkd Imaging Classifier
+# Mayo ADPKD Imaging Classifier
 
-> **Domain:** Clinical Decision Support & Biomedical Computing
-> **Reference Guidelines & Standards:** `Standard Clinical Formulations & ISO/IEC Quality Frameworks`
+An independent educational implementation of the Mayo Imaging Classification (MIC) for **typical** autosomal dominant polycystic kidney disease (ADPKD). The calculator assigns imaging classes **1A–1E** from age and height-adjusted total kidney volume (htTKV). Atypical imaging morphology is explicitly left unclassified.
 
-<div align="center">
+## Use the browser calculator
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
-![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
-![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
-
-</div>
-
----
-
-## 📖 What It Does
-
-Mayo Imaging Classification for ADPKD
-Estimates future eGFR decline in autosomal dominant polycystic kidney disease from height-adjusted total kidney volume (HtTKV).
-
-Zero-dependency Python implementation with single and batch evaluation.
-Author: Dr. Abu Suraih Sakhri
-License: MIT
-
----
-
-## ⚙️ Key Capabilities & Algorithmic Modules
-
-### 🔬 Analytical Functions
-
-- **`calculate_metrics()`**: Core domain algorithm for mayo-adpkd-imaging-classifier.
-- **`process_single()`** — calculates and validates process_single parameters.
-- **`process_batch()`** — calculates and validates process_batch parameters with file validation.
-- **`main()`** — CLI entry point for single and batch operations.
-
----
-
-## 📐 Mathematical Formulation & Logic
-
-```text
-  score = primary_val
-  rounded_score = round(score, 2)
-  res = calculate_metrics(**kwargs)
-  calc_res = calculate_metrics(**r)
-```
-
----
-
-## 💻 Installation
+Open `web/index.html` in a current browser, or serve the directory locally:
 
 ```bash
-# Clone the repository
-git clone https://github.com/abusuraihsakhri/mayo-adpkd-imaging-classifier.git
-cd mayo-adpkd-imaging-classifier
-
-# Install dependencies
-pip install -e .
-
-# For API server support
-pip install -e ".[api]"
-
-# For development (includes testing)
-pip install -e ".[dev]"
+python -m http.server 8001 --directory web
+# Visit http://localhost:8001/
 ```
 
----
+Enter age (15–80 years), imaging morphology, and either htTKV (mL/m) **or** total kidney volume (mL) together with height (m). The app also imports and exports CSV batches entirely in the browser. Files are not uploaded, stored, or transmitted by the app. Avoid using directly identifying patient information. No account or backend is required for the browser workflow.
 
-## 💻 CLI Quickstart & Usage
+**Research/educational use only.** MIC is a prognostic imaging stratum, not a diagnosis, observed longitudinal growth measurement, individual eGFR decline forecast, or stand-alone treatment decision. Morphology must be determined from imaging independently. Do not apply classes 1A–1E to atypical class 2 morphology or outside the supported age range.
 
-### 1. Single Case Evaluation
+## Clinical formulation
+
+For typical bilateral diffuse disease at ages 15–80:
+
+- `htTKV = TKV (mL) / height (m)`
+- `estimated annual growth (%) = 100 × ((htTKV / 150) ^ (1 / age) − 1)`
+- Class 1A: growth <1.5%; 1B: 1.5–<3%; 1C: 3–<4.5%; 1D: 4.5–<6%; 1E: ≥6%.
+
+The 150 mL/m constant is the theoretical starting htTKV at birth used in the MIC model. The growth percentage is inferred from **a single cross-sectional measurement**, not serially measured. Clinical interpretation, particularly near class thresholds, requires additional context.
+
+References:
+- [Irazabal et al., *JASN* 2015, 26:160–172](https://pmc.ncbi.nlm.nih.gov/articles/PMC4279733/)
+- [KDIGO 2025 ADPKD guideline](https://kdigo.org/guidelines/autosomal-dominant-polycystic-kidney-disease-adpkd/)
+- [Official Mayo research calculator](https://www.mayo.edu/research/documents/pkd-center-adpkd-classification/doc-20094754) (independent implementation here)
+
+## Python single-case and batch usage
+
+Requires Python 3.10 or newer:
+
 ```bash
-python cli.py single --v1 14.5 --v2 4.2 --v3 1.8
+python -m pip install -e .
+mayo-adpkd single --age 40 --httkv-ml-per-m 800
+mayo-adpkd single --age 40 --tkv-ml 1440 --height-m 1.8
+mayo-adpkd single --age 40 --httkv-ml-per-m 800 --morphology atypical
+mayo-adpkd batch -i sample.csv -o results.csv
 ```
 
-### 2. Batch CSV Processing
+CSV must include `age` and either `httkv_ml_per_m`, or **both** `tkv_ml` and `height_m`. Optional columns include `case_id` and `morphology` (defaults to `typical`). Each row is validated; invalid data aborts the export rather than generating a partial result. Input and output files must differ. Results include `mayo_class`, `ht_tkv_ml_per_m`, `estimated_annual_growth_percent` and an interpretation disclaimer.
+
+The browser calculator requires no Python, Pyodide, server, or third-party JavaScript libraries. It uses ordinary JavaScript and local File/Blob APIs and supports modern desktop and mobile browsers.
+
+## Optional legacy audit demonstration
+
+`agents/`, `cli.py`, and `enrichment.py` contain a **separate nonclinical worker/audit demonstration**, preserved for existing integrations and tests. Its generic threshold alerts are **not validated ADPKD prognosis or treatment rules**. The configured `mock` reasoning provider is deterministic and does not connect to external model APIs.
+
+To run the demonstration API locally:
+
 ```bash
-python cli.py batch -i sample.csv -o results.csv
-```
-
-### 3. Enterprise Supervisor Mode
-```bash
-# Set the audit security key (required)
-export AUDIT_SECRET_KEY="your-secure-key-here-min-16-chars"
-
-# Run audit evaluation
-python cli.py audit --task-id TASK-001 --primary 28.5 --secondary 14.2
-
-# Verify audit trail integrity
-python cli.py verify-audit
-
-# Launch FastAPI REST server
+python -m pip install -e ".[api]"
+export AUDIT_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')"
+export API_ACCESS_TOKEN="$(python -c 'import secrets; print(secrets.token_hex(32))')"
 python cli.py serve --host 127.0.0.1 --port 8000
 ```
 
-### Parameter Reference
-- `--v1`: Primary parameter (float, default: 10.0)
-- `--v2`: Secondary parameter (float, default: 5.0)
-- `--v3`: Tertiary parameter (float, default: 2.0)
-- `-i, --input`: Input CSV file path (required for batch)
-- `-o, --output`: Output CSV file path (default: results.csv)
+Audit, chat, and log endpoints require an `Authorization: Bearer <API_ACCESS_TOKEN>` header. The HMAC ledger is process-local and lost on restart; it is **not** a persistent compliance audit store. Identifier screening uses heuristic regular expressions and is not a validated de-identification solution. Do not send real patient information to these endpoints. If running Docker Compose, set `AUDIT_SECRET_KEY` and `API_ACCESS_TOKEN` securely in your host environment; production secrets are not included in the repository.
 
-### Input Data Schema
-
-| Field | Description | Requirement |
-|:------|:------------|:------------|
-| `Patient_ID` | Parameter / observation metric | Required |
-| `v1` | Parameter / observation metric | Required |
-| `v2` | Parameter / observation metric | Required |
-| `v3` | Parameter / observation metric | Required |
-
----
-
-## 🛡️ Security & Enterprise Architecture
-
-* **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition. Requires `AUDIT_SECRET_KEY` environment variable.
-* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
-* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
-
-### Security Configuration
-
-The `AUDIT_SECRET_KEY` environment variable is **required** for audit trail operations. Generate a secure key:
+## Tests and technology
 
 ```bash
-python -c "import secrets; print(secrets.token_hex(32))"
+python -m pip install -e ".[api,test]"
+python -m pytest -q
+node --test web/classifier.test.js   # Node.js 22+
 ```
 
----
+The repository uses Python, Pydantic, optional FastAPI, vanilla HTML/CSS/JavaScript, and GitHub Actions. The static web application is designed for GitHub Pages (deployment requires Pages to be enabled for the repository). The repository includes a Dockerfile for the optional backend.
 
-## 🧪 Testing & Verification
-
-Run the automated test suite:
-
-```bash
-pytest -v
-```
-
-Execute high-throughput batch simulation benchmarks:
-
-```bash
-python simulator.py --tasks 1000 --concurrency 8
-```
-
----
-
-## 🐳 Container Deployment
-
-```bash
-docker build -t mayo-adpkd-imaging-classifier .
-docker run -p 8000:8000 -e AUDIT_SECRET_KEY="your-secure-key" mayo-adpkd-imaging-classifier
-```
-
----
-
-## 📁 Project Structure
-
-```
-mayo-adpkd-imaging-classifier/
-├── agents/                  # Enterprise agent modules
-│   ├── __init__.py         # Package initialization
-│   ├── api.py              # FastAPI REST server
-│   ├── base.py             # Security, PHI guard, HMAC audit
-│   ├── llm_factory.py      # LLM provider factory
-│   ├── models.py           # Pydantic data models
-│   ├── supervisor.py       # Supervisor orchestrator
-│   └── workers.py          # Specialized domain workers
-├── tests/                  # Test suite
-│   ├── test_enrichment.py  # Enrichment module tests
-│   └── test_mayo_adpkd_imaging_classifier.py  # Core tests
-├── web/                    # Web dashboard
-│   └── index.html          # Operations console
-├── mayo_adpkd.py           # Core classification algorithm
-├── cli.py                  # Command-line interface
-├── enrichment.py           # Enrichment feature engines
-├── simulator.py            # High-throughput simulator
-├── sample.csv              # Sample input data
-├── benchmark_dataset.json  # Benchmark test cases
-├── pyproject.toml          # Project configuration
-├── Dockerfile              # Container definition
-└── docker-compose.yml      # Docker Compose configuration
-```
+Licensed under [MIT](LICENSE).
