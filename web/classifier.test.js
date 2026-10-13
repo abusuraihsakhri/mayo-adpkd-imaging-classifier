@@ -10,6 +10,12 @@ test("MIC classes match 1.5%, 3%, 4.5%, and 6% yearly growth bands", () => {
     assert.ok(Math.abs(result.estimated_annual_growth_percent - rate) < 0.0001);
   }
 });
+test("exact published boundary values are assigned to the upper class", () => {
+  for (const [rate, expected] of [[1.5,"1B"], [3,"1C"], [4.5,"1D"], [6,"1E"]]) {
+    const httkv = 150 * Math.pow(1 + rate/100, 40);
+    assert.equal(classify({age:40, httkv_ml_per_m:httkv}).mayo_class, expected);
+  }
+});
 test("TKV and height yield identical classification to htTKV", () => {
   const a = classify({age:40, httkv_ml_per_m:800});
   const b = classify({age:40, tkv_ml:1440, height_m:1.8});
