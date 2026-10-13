@@ -67,7 +67,7 @@
   }
   function csvCell(value) {
     let str = value == null ? "" : String(value);
-    if (/^[\s]*[=+@-]/.test(str)) str = "'" + str; // spreadsheet formula injection
+    if (typeof value === "string" && /^[\s]*[=+@-]/.test(str)) str = "'" + str; // spreadsheet formula injection
     return '"' + str.replace(/"/g, '""') + '"';
   }
   function toCSV(rows) {
