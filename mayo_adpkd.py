@@ -81,7 +81,7 @@ def calculate_metrics(*, age, tkv_ml=None, height_m=None,
 
 
 def process_batch(input_csv, output_csv):
-    """Evaluate a CSV atomically. All rows must be valid; no partial export."""
+    """Validate every input row before writing a result CSV."""
     source, destination = Path(input_csv), Path(output_csv)
     if not source.is_file():
         raise FileNotFoundError(f"Input CSV file not found: {source}")
@@ -117,10 +117,17 @@ def process_batch(input_csv, output_csv):
             except ValueError as exc:
                 raise ValueError(f"CSV row {line}: {exc}") from exc
             rows.append({**row, **{k: result[k] for k in extra}})
+    # Keep untrusted identifiers/text from being evaluated as spreadsheet formulas.
+    def safe_cell(value):
+        if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@")):
+            return "'" + value
+        return value
+
     with destination.open("w", newline="", encoding="utf-8") as stream:
         writer = csv.DictWriter(stream, fieldnames=fields + extra)
         writer.writeheader()
-        writer.writerows(rows)
+        writer.writerows({key: safe_cell(value) for key, value in row.items()}
+                         for row in rows)
     return len(rows)
 
 
