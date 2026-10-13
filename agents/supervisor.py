@@ -77,5 +77,5 @@ class SystemSupervisor:
 
     def query_supervisory_chat(self, query: str) -> str:
         PHIGuard.assert_no_phi(query)
-        prompt = f"Supervisor inquiry for Mayo Adpkd Imaging Classifier under CAP / CLSI / ISO Standards: {query}"
+        prompt = f"Supervisor inquiry for Mayo Adpkd Imaging Classifier (nonclinical demonstration): {query}"
         return self.llm.invoke(prompt)
