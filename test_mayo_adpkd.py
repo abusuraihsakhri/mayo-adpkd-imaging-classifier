@@ -99,3 +99,14 @@ def test_batch_rejects_overwriting_input(tmp_path):
 def test_cli_single(capsys):
     assert main(["single", "--age", "40", "--httkv-ml-per-m", "800"]) == 0
     assert '"mayo_class"' in capsys.readouterr().out
+
+
+def test_csv_output_escapes_spreadsheet_formulas(tmp_path):
+    source = tmp_path / "source.csv"
+    output = tmp_path / "output.csv"
+    source.write_text('case_id,age,httkv_ml_per_m\\n"=SUM(1,2)",40,800\\n')
+    process_batch(source, output)
+    with output.open(newline="", encoding="utf-8") as stream:
+        row = next(csv.DictReader(stream))
+    assert row["case_id"] == "'=SUM(1,2)"
+    assert row["mayo_class"] in ("1A", "1B", "1C", "1D", "1E")
