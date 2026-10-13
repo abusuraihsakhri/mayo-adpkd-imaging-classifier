@@ -1,9 +1,9 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Mayo Adpkd Imaging Classifier API",
-    "description": "Enterprise Distributed Component Platform (Clinical & Cryptographic AI) adhering to CAP / CLSI / NIST Standards.",
-    "version": "3.0.0-ENTERPRISE",
+    "title": "Mayo ADPKD audit demonstration API",
+    "description": "Nonclinical synthetic worker/audit demo. Requires bearer authentication for audit, chat, and logs. The MIC calculator is a separate standalone Python and browser application.",
+    "version": "3.0.1",
     "contact": {
       "name": "Dr. Abu Suraih Sakhri",
       "url": "https://github.com/abusuraihsakhri"
@@ -15,7 +15,7 @@
         "summary": "Health and metadata check",
         "responses": {
           "200": {
-            "description": "System optimal"
+            "description": "Health status JSON (no clinical certification)"
           }
         }
       }
@@ -25,14 +25,14 @@
         "summary": "Prometheus operational metrics",
         "responses": {
           "200": {
-            "description": "Prometheus text metrics"
+            "description": "Counts and status as JSON (not Prometheus text)"
           }
         }
       }
     },
     "/api/audit": {
       "post": {
-        "summary": "Dispatch task payload across specialized workers",
+        "summary": "Evaluate synthetic demo thresholds and create signed audit entry",
         "requestBody": {
           "content": {
             "application/json": {
@@ -70,13 +70,27 @@
         "responses": {
           "200": {
             "description": "Consensus dossier with HMAC signature"
+          },
+          "401": {
+            "description": "Missing bearer token"
+          },
+          "403": {
+            "description": "Invalid bearer token"
+          },
+          "503": {
+            "description": "API_ACCESS_TOKEN is not configured"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/chat": {
       "post": {
-        "summary": "Air-gapped supervisory conversational assistant",
+        "summary": "Deterministic mock response (no real model inference)",
         "requestBody": {
           "content": {
             "application/json": {
@@ -97,18 +111,54 @@
         "responses": {
           "200": {
             "description": "Supervisory response"
+          },
+          "401": {
+            "description": "Missing bearer token"
+          },
+          "403": {
+            "description": "Invalid bearer token"
+          },
+          "503": {
+            "description": "API_ACCESS_TOKEN is not configured"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/audit/logs": {
       "get": {
-        "summary": "Retrieve and cryptographically verify HMAC audit trail",
+        "summary": "Read HMAC audit trail (authenticated only)",
         "responses": {
           "200": {
             "description": "Cryptographic audit trail"
+          },
+          "401": {
+            "description": "Missing bearer token"
+          },
+          "403": {
+            "description": "Invalid bearer token"
+          },
+          "503": {
+            "description": "API_ACCESS_TOKEN is not configured"
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
       }
     }
   }

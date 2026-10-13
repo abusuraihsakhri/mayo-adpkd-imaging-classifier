@@ -1,236 +1,161 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mayo Adpkd Imaging Classifier — Operations Console</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg: #090d16;
-            --card: #111827;
-            --border: #1f293d;
-            --accent: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.25);
-            --text: #f3f4f6;
-            --text-muted: #9ca3af;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --success: #10b981;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            padding: 2rem;
-            min-height: 100vh;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .header-title h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
-        .header-title p { color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem; }
-        .badge {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            background: var(--accent-glow);
-            color: var(--accent);
-            border: 1px solid var(--accent);
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1.2fr;
-            gap: 1.5rem;
-        }
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        }
-        .card h2 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .form-group { margin-bottom: 1rem; }
-        label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem; }
-        input, select, textarea {
-            width: 100%;
-            padding: 0.65rem 0.9rem;
-            background: #0d1322;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: #fff;
-            font-family: inherit;
-            font-size: 0.9rem;
-        }
-        input:focus, textarea:focus { outline: none; border-color: var(--accent); }
-        .btn {
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            padding: 0.7rem 1.4rem;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-            width: 100%;
-        }
-        .btn:hover { background: #2563eb; }
-        .terminal {
-            background: #060911;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            color: #10b981;
-            height: 380px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
-        .metrics-bar {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        .metric-box {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            text-align: center;
-        }
-        .metric-val { font-size: 1.4rem; font-weight: 700; color: #fff; margin-top: 0.25rem; }
-        .metric-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Mayo ADPKD imaging classification using age and height-adjusted total kidney volume.">
+<title>Mayo ADPKD Imaging Classifier</title>
+<style>
+:root { color-scheme: light; --ink:#172c42; --muted:#526678; --border:#ccd7e1; --blue:#1758a3; --bg:#f4f7fa; --card:#fff; --danger:#a02020 }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{width:min(990px,calc(100% - 32px));margin:36px auto 70px}
+h1{font-size:clamp(1.65rem,4vw,2.3rem);margin:0 0 8px;letter-spacing:-.03em}
+h2{font-size:1.18rem;margin:0 0 14px}
+p{margin:8px 0 16px}
+.lede{color:var(--muted);max-width:800px}
+.layout{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;margin-top:24px}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;min-width:0}
+.field{margin:0 0 15px}
+label{display:block;font-weight:650;font-size:.93rem;margin-bottom:5px}
+input,select,button{font:inherit}
+input,select{width:100%;padding:10px 12px;border:1px solid #a5b6c5;border-radius:7px;background:white;color:var(--ink)}
+input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid #83b7f8;outline-offset:2px}
+button{border:0;background:var(--blue);color:white;font-weight:650;padding:11px 18px;border-radius:8px;cursor:pointer}
+button:hover{background:#0d4486}
+button:disabled{background:#8c9dac;cursor:not-allowed}
+small,.note{color:var(--muted);font-size:.875rem}
+fieldset{padding:0;margin:0 0 16px;border:0}
+legend{font-weight:650;margin-bottom:8px}
+.radio-line{display:flex;flex-wrap:wrap;gap:15px}
+.radio-line label{font-weight:500}
+.radio-line input{width:auto;margin-right:5px}
+.result{font-size:2.5rem;line-height:1.2;font-weight:800;color:var(--blue);margin:8px 0}
+dl{display:grid;grid-template-columns:1fr auto;gap:10px;margin:18px 0}
+dt{color:var(--muted)}dd{margin:0;font-weight:650;text-align:right}
+.error{color:var(--danger);font-weight:650;white-space:pre-wrap}
+.info{border-left:3px solid var(--blue);background:#edf4fc;padding:12px 14px;border-radius:3px}
+.section{margin-top:18px}
+a{color:var(--blue)}
+hr{border:0;border-top:1px solid var(--border);margin:20px 0}
+#batchMessage{margin-top:12px;white-space:pre-wrap}
+footer{font-size:.87rem;color:var(--muted);margin-top:26px}
+@media(max-width:720px){.layout{grid-template-columns:1fr}main{margin-top:22px}.panel{padding:18px}}
+</style>
 </head>
 <body>
-
-    <div class="header">
-        <div class="header-title">
-            <h1>Mayo Adpkd Imaging Classifier</h1>
-            <p>Domain: Clinical & Cryptographic AI | Standard: CAP / CLSI / NIST Standards | LabMind-Atlas Architecture</p>
-        </div>
-        <div>
-            <span class="badge">Air-Gapped Active</span>
-            <span class="badge" style="background: rgba(16,185,129,0.2); color: #10b981; border-color: #10b981;">Zero-PHI Guard Active</span>
-        </div>
-    </div>
-
-    <div class="metrics-bar">
-        <div class="metric-box">
-            <div class="metric-label">System Status</div>
-            <div class="metric-val" style="color: var(--success);" id="m-status">OPTIMAL</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">Tasks Processed</div>
-            <div class="metric-val" id="m-tasks">142</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">Audit Blocks Signed</div>
-            <div class="metric-val" id="m-audit">142</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">PHI Interceptions</div>
-            <div class="metric-val" style="color: var(--accent);" id="m-phi">0</div>
-        </div>
-    </div>
-
-    <div class="grid">
-        <div class="card">
-            <h2>⚙️ Dispatch Distributed Component Audit</h2>
-            <div class="form-group">
-                <label>Task / Sample ID</label>
-                <input type="text" id="task_id" value="TASK-2026-LIVE-01">
-            </div>
-            <div class="form-group">
-                <label>Target Identifier</label>
-                <input type="text" id="target_id" value="SPECIMEN-ALPHA-77">
-            </div>
-            <div class="form-group">
-                <label>Primary Measurement / Value</label>
-                <input type="number" id="primary_metric" value="29.4" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Secondary Metric / Kinetic Index</label>
-                <input type="number" id="secondary_metric" value="14.8" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Status / Phenotype Descriptor</label>
-                <input type="text" id="status_descriptor" value="DISCORDANT_ANOMALY">
-            </div>
-            <div class="form-group">
-                <label><input type="checkbox" id="is_critical" checked> Trigger Emergency / Critical Flag</label>
-            </div>
-            <button class="btn" onclick="runAudit()">Execute Distributed Component Audit</button>
-        </div>
-
-        <div class="card">
-            <h2>📊 Real-Time Consensus Dossier & Audit Log</h2>
-            <div class="terminal" id="outputConsole">// Mayo Adpkd Imaging Classifier Operations Console Ready
-// Connection established with Air-Gapped Supervisor
-// Cryptographic HMAC-SHA256 audit ledger loaded.
-// Ready for live task payload dispatch...</div>
-        </div>
-    </div>
-
-    <script>
-        async function runAudit() {
-            const consoleEl = document.getElementById('outputConsole');
-            consoleEl.innerText = "// Dispatching task across specialized workers...
-// Invoking InvariantQCWorker, SafetyEscalationWorker, ProtocolWorker...";
-
-            const payload = {
-                task_id: document.getElementById('task_id').value,
-                target_identifier: document.getElementById('target_id').value,
-                primary_metric: parseFloat(document.getElementById('primary_metric').value),
-                secondary_metric: parseFloat(document.getElementById('secondary_metric').value),
-                status_descriptor: document.getElementById('status_descriptor').value,
-                is_critical_flag: document.getElementById('is_critical').checked
-            };
-
-            try {
-                const res = await fetch('/api/audit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                consoleEl.innerText = JSON.stringify(data, null, 2);
-                document.getElementById('m-tasks').innerText = parseInt(document.getElementById('m-tasks').innerText) + 1;
-                document.getElementById('m-audit').innerText = parseInt(document.getElementById('m-audit').innerText) + 1;
-            } catch (err) {
-                consoleEl.innerText = "// Offline / Simulation Output:\n" + JSON.stringify({
-                    dossier_id: "DOSSIER-SIM-" + Math.floor(Math.random()*10000),
-                    system: "mayo-adpkd-imaging-classifier",
-                    domain: "Clinical & Cryptographic AI",
-                    task_id: payload.task_id,
-                    overall_urgency: payload.is_critical_flag ? "CRITICAL_STAT_PANIC" : "ELEVATED_RISK",
-                    integrity_status: "DISCORDANT_ANOMALY",
-                    alerts: [
-                        { worker: "InvariantQCWorker", alert: "Primary metric exceeds upper reference bound" },
-                        { worker: "SafetyEscalationWorker", alert: "Critical emergency interlock flag active" }
-                    ],
-                    audit_hash: "HMAC_SHA256_e83f9a72b941d6c381f9"
-                }, null, 2);
-            }
-        }
-    </script>
+<main>
+<header>
+<h1>Mayo ADPKD imaging classifier</h1>
+<p class="lede">Calculate Mayo Imaging Classification (MIC) 1A–1E from age and height-adjusted total kidney volume (htTKV). For <strong>typical bilateral diffuse ADPKD morphology, ages 15–80 only.</strong></p>
+</header>
+<div class="layout">
+<section class="panel" aria-labelledby="inputTitle">
+<h2 id="inputTitle">Imaging inputs</h2>
+<form id="caseForm" novalidate>
+<div class="field"><label for="age">Age (years)</label><input id="age" type="number" min="15" max="80" step="any" value="40" required></div>
+<div class="field"><label for="morphology">Imaging morphology</label><select id="morphology"><option value="typical">Typical — bilateral diffuse</option><option value="atypical">Atypical — MIC 1A–1E not applicable</option></select></div>
+<fieldset><legend>Volume measurement</legend>
+<div class="radio-line"><label><input type="radio" name="volumeType" value="httkv" checked> Enter htTKV</label><label><input type="radio" name="volumeType" value="tkv"> Calculate from TKV and height</label></div>
+</fieldset>
+<div class="field" id="httkvField"><label for="httkv">Height-adjusted TKV (mL/m)</label><input id="httkv" type="number" min="0" step="any" value="800"></div>
+<div id="tkvFields" hidden>
+<div class="field"><label for="tkv">Total kidney volume — both kidneys (mL)</label><input id="tkv" type="number" min="0" step="any" placeholder="e.g., 1400"></div>
+<div class="field"><label for="height">Height (m)</label><input id="height" type="number" min="0" step="any" placeholder="e.g., 1.75"></div>
+</div>
+<button type="submit">Calculate Mayo class</button>
+</form>
+<p class="note">Imaging morphology must be assessed independently; the numerical inputs cannot determine whether cyst distribution is typical.</p>
+</section>
+<section class="panel" aria-labelledby="resultTitle">
+<h2 id="resultTitle">Classification result</h2>
+<div id="message" role="status" aria-live="polite">Enter measurements and calculate.</div>
+<div id="result" hidden>
+<p class="note">Mayo Imaging Classification</p>
+<div class="result" id="classValue"></div>
+<dl>
+<dt>htTKV</dt><dd id="volumeValue"></dd>
+<dt>Estimated annual kidney growth</dt><dd id="growthValue"></dd>
+<dt>Imaging phenotype</dt><dd id="morphValue"></dd>
+</dl>
+<div class="info" id="interpretation"></div>
+</div>
+<hr>
+<p class="note"><strong>Important:</strong> The growth rate is inferred from a cross-sectional size model, not measured longitudinal growth. MIC category supports prognostic assessment; it does not provide an individual eGFR slope, establish treatment eligibility, or replace clinical evaluation.</p>
+</section>
+</div>
+<section class="panel section" aria-labelledby="batchTitle">
+<h2 id="batchTitle">CSV batch classification</h2>
+<p class="note">Import a UTF-8 CSV with <code>age</code> and either <code>httkv_ml_per_m</code> or both <code>tkv_ml</code> and <code>height_m</code>. Optional: <code>case_id</code>, <code>morphology</code> (typical/atypical). Export includes classification and modeled growth. Maximum 1 MB / 5,000 rows. No files are sent to a server.</p>
+<div class="field"><label for="csvFile">Select CSV file</label><input id="csvFile" type="file" accept=".csv,text/csv"></div>
+<button type="button" id="batchButton">Classify and download CSV</button>
+<div id="batchMessage" role="status" aria-live="polite"></div>
+</section>
+<footer>
+<strong>For research and educational use; not a diagnostic device.</strong> No login, tracking, API, or remote processing. Avoid entering directly identifying patient information.
+<p>Basis: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4279733/" target="_blank" rel="noopener noreferrer">Irazabal et al., JASN 2015</a> and <a href="https://kdigo.org/guidelines/autosomal-dominant-polycystic-kidney-disease-adpkd/" target="_blank" rel="noopener noreferrer">KDIGO 2025 ADPKD guideline</a>. This is an independent educational implementation, not the official Mayo calculator.</p>
+</footer>
+</main>
+<script src="classifier.js"></script>
+<script>
+(function () {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const mode = () => document.querySelector('input[name="volumeType"]:checked').value;
+  document.querySelectorAll('input[name="volumeType"]').forEach(el => el.addEventListener("change", () => {
+    const direct = mode() === "httkv";
+    $("httkvField").hidden = !direct;
+    $("tkvFields").hidden = direct;
+  }));
+  $("caseForm").addEventListener("submit", event => {
+    event.preventDefault();
+    $("result").hidden = true;
+    $("message").className = "";
+    try {
+      const values = { age: $("age").value, morphology: $("morphology").value };
+      if (mode() === "httkv") values.httkv_ml_per_m = $("httkv").value;
+      else { values.tkv_ml = $("tkv").value; values.height_m = $("height").value; }
+      const res = MayoClassifier.classify(values);
+      $("classValue").textContent = res.mayo_class || "Not applicable (class 2)";
+      $("volumeValue").textContent = res.ht_tkv_ml_per_m.toLocaleString() + " mL/m";
+      $("growthValue").textContent = res.estimated_annual_growth_percent === null
+        ? "Not applicable" : res.estimated_annual_growth_percent.toFixed(2) + "%/year";
+      $("morphValue").textContent = res.morphology;
+      $("interpretation").textContent = res.mayo_class
+        ? "MIC " + res.mayo_class + " is an imaging-based prognostic stratum, not an individual prediction or treatment recommendation."
+        : "Atypical morphology (class 2) must not be assigned a typical MIC 1A–1E category.";
+      $("message").textContent = "";
+      $("result").hidden = false;
+    } catch (err) {
+      $("message").className = "error";
+      $("message").textContent = err.message;
+    }
+  });
+  $("batchButton").addEventListener("click", async () => {
+    const file = $("csvFile").files[0];
+    $("batchMessage").className = "";
+    if (!file) { $("batchMessage").textContent = "Select a CSV file."; return; }
+    if (file.size > 1024 * 1024) { $("batchMessage").textContent = "File exceeds 1 MB."; return; }
+    $("batchButton").disabled = true;
+    try {
+      const rows = MayoClassifier.parseCSV(await file.text());
+      const result = rows.map((row, i) => {
+        try { return { case_id: row.case_id || "", ...MayoClassifier.classify(row) }; }
+        catch (err) { throw new Error("CSV row " + (i + 2) + ": " + err.message); }
+      });
+      const data = MayoClassifier.toCSV(result);
+      const url = URL.createObjectURL(new Blob([data], {type: "text/csv;charset=utf-8"}));
+      const a = document.createElement("a");
+      a.href = url; a.download = "mayo-adpkd-results.csv";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      $("batchMessage").textContent = "Classified " + result.length + " rows. Download started.";
+    } catch (err) {
+      $("batchMessage").className = "error";
+      $("batchMessage").textContent = err.message;
+    } finally { $("batchButton").disabled = false; }
+  });
+})();
+</script>
 </body>
 </html>

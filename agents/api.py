@@ -1,20 +1,32 @@
+"""FastAPI endpoints for the optional local audit demonstration.
+
+This backend is distinct from the clinical Mayo Imaging Classification module.
+Configure API_ACCESS_TOKEN and AUDIT_SECRET_KEY before serving externally.
 """
-FastAPI REST API Server for Mayo Adpkd Imaging Classifier.
-"""
-from typing import Dict, Any, List
-from fastapi import FastAPI, HTTPException
+import os
+import secrets
+from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel
-from .base import AuditLogger, PHIGuard
-from .models import SystemTaskPayload, ConsensusDossier
+from .base import AuditLogger, SecurityException
+from .models import SystemTaskPayload
 from .supervisor import SystemSupervisor
 
 supervisor = SystemSupervisor(model_provider="mock")
-
 app = FastAPI(
-    title="Mayo Adpkd Imaging Classifier API",
-    description="Enterprise Distributed Component Platform (Clinical & Biomedical AI)",
-    version="3.0.0-ENTERPRISE",
+    title="Mayo ADPKD repository audit demo API",
+    description="Nonclinical demonstration of the existing worker/audit machinery",
+    version="3.0.1",
 )
+
+
+def require_token(authorization: str | None = Header(default=None)):
+    token = os.getenv("API_ACCESS_TOKEN", "")
+    if len(token) < 32:
+        raise HTTPException(503, "API_ACCESS_TOKEN must be configured (minimum 32 characters)")
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(401, "Bearer token required")
+    if not secrets.compare_digest(authorization[7:], token):
+        raise HTTPException(403, "Invalid bearer token")
 
 
 class ChatRequest(BaseModel):
@@ -23,33 +35,35 @@ class ChatRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"status": "HEALTHY", "service": "mayo-adpkd-imaging-classifier", "domain": "Clinical & Biomedical AI", "standard": "CAP / CLSI / ISO Standards", "version": "3.0.0-ENTERPRISE"}
+    return {"status": "HEALTHY", "service": "mayo-adpkd-imaging-classifier",
+            "component": "nonclinical audit demo"}
 
 
 @app.get("/metrics")
 def metrics():
     return {
         "dossiers_processed_total": len(supervisor.dossier_registry),
-        "audit_blocks_total": len(AuditLogger.get_trail()),
-        "system_status": "NOMINAL_OPTIMAL"
+        "audit_blocks_total": len(AuditLogger.get_trail()) if os.getenv("AUDIT_SECRET_KEY") else 0,
     }
 
 
-@app.post("/api/audit")
+@app.post("/api/audit", dependencies=[Depends(require_token)])
 def api_audit(payload: SystemTaskPayload):
-    dossier = supervisor.process_task(payload)
-    return dossier.to_dict()
+    try:
+        return supervisor.process_task(payload).to_dict()
+    except SecurityException as exc:
+        raise HTTPException(400, "Sensitive identifier rejected") from exc
 
 
-@app.post("/api/chat")
+@app.post("/api/chat", dependencies=[Depends(require_token)])
 def api_chat(req: ChatRequest):
     try:
-        ans = supervisor.query_supervisory_chat(req.query)
-        return {"response": ans}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        return {"response": supervisor.query_supervisory_chat(req.query)}
+    except SecurityException as exc:
+        raise HTTPException(400, "Sensitive identifier rejected") from exc
 
 
-@app.get("/api/audit/logs")
+@app.get("/api/audit/logs", dependencies=[Depends(require_token)])
 def api_audit_logs():
-    return {"audit_trail": AuditLogger.get_trail(), "verified": AuditLogger.verify_integrity()}
+    return {"audit_trail": AuditLogger.get_trail(),
+            "verified": AuditLogger.verify_integrity()}

@@ -1,128 +1,163 @@
 #!/usr/bin/env python3
-"""
-Mayo Imaging Classification for ADPKD
-Estimates future eGFR decline in autosomal dominant polycystic kidney disease from height-adjusted total kidney volume (HtTKV).
+"""Mayo Imaging Classification (MIC) for typical ADPKD, ages 15–80.
 
-Zero-dependency Python implementation with single and batch evaluation.
-Author: Dr. Abu Suraih Sakhri
-License: MIT
+Based on Irazabal et al., JASN 2015 and KDIGO 2025. This classifies
+age-adjusted height-adjusted total kidney volume; it does NOT predict an
+individual patient's eGFR or determine eligibility for treatment.
 """
-
 import argparse
 import csv
 import json
 import math
-import sys
-from typing import Dict, Any, List, Optional
+from pathlib import Path
+
+STARTING_HTTKV = 150.0  # mL/m, theoretical baseline at birth
+BOUNDARIES = ((1.5, "1A"), (3.0, "1B"), (4.5, "1C"), (6.0, "1D"))
 
 
-def calculate_metrics(**kwargs) -> Dict[str, Any]:
+def _positive_number(value, label):
+    try:
+        result = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label} must be a finite positive number") from exc
+    if not math.isfinite(result) or result <= 0:
+        raise ValueError(f"{label} must be a finite positive number")
+    return result
+
+
+def calculate_metrics(*, age, tkv_ml=None, height_m=None,
+                      httkv_ml_per_m=None, morphology="typical"):
+    """Return MIC class for typical morphology, or unclassified for atypical.
+
+    Supply either htTKV in mL/m, or TKV in mL together with height in meters.
+    The growth percentage is the model-implied annual TKV growth, not an
+    observed longitudinal rate.
     """
-    Core domain algorithm for mayo-adpkd-imaging-classifier.
-    """
-    params = {}
-    for k, v in kwargs.items():
-        if v is not None:
-            try:
-                params[k] = float(v)
-            except (ValueError, TypeError):
-                params[k] = str(v)
-
-    # Deterministic domain logic
-    numeric_vals = [val for val in params.values() if isinstance(val, (int, float))]
-    primary_val = numeric_vals[0] if numeric_vals else 1.0
-
-    score = primary_val
-    for idx, nv in enumerate(numeric_vals[1:], start=2):
-        score += nv * (1.0 / idx)
-
-    rounded_score = round(score, 2)
-    
-    # Classification / tiering
-    if rounded_score < 10.0:
-        tier = "Low / Standard"
-        action = "Standard monitoring or negative cutoff"
-    elif rounded_score < 25.0:
-        tier = "Moderate / Intermediate"
-        action = "Close observation or secondary evaluation"
+    years = _positive_number(age, "age")
+    if not 15 <= years <= 80:
+        raise ValueError("MIC is validated for ages 15–80 years")
+    morph = str(morphology).strip().lower()
+    if morph not in ("typical", "atypical"):
+        raise ValueError("morphology must be 'typical' or 'atypical'")
+    if httkv_ml_per_m is not None and (tkv_ml is not None or height_m is not None):
+        raise ValueError("Specify htTKV OR both TKV and height, not both")
+    if httkv_ml_per_m is None:
+        if tkv_ml is None or height_m is None:
+            raise ValueError("Supply httkv_ml_per_m or both tkv_ml and height_m")
+        volume = _positive_number(tkv_ml, "tkv_ml")
+        height = _positive_number(height_m, "height_m")
+        httkv = volume / height
     else:
-        tier = "High / Severe"
-        action = "Urgent clinical intervention or primary positive finding"
+        httkv = _positive_number(httkv_ml_per_m, "httkv_ml_per_m")
+    if not math.isfinite(httkv) or httkv <= 0:
+        raise ValueError("Calculated htTKV must be finite and positive")
 
-    return {
-        "tool": "mayo-adpkd-imaging-classifier",
-        "score": rounded_score,
-        "classification": tier,
-        "clinical_recommendation": action,
-        "inputs_evaluated": len(params),
+    output = {
+        "age_years": years,
+        "ht_tkv_ml_per_m": round(httkv, 3),
+        "morphology": morph,
+        "mayo_class": None,
+        "estimated_annual_growth_percent": None,
+        "interpretation": "MIC 1A–1E cannot be applied to atypical (class 2) morphology.",
     }
+    if morph == "atypical":
+        return output
+
+    # HtTKV = 150 × (1 + growth_fraction) ** age.
+    growth = 100.0 * math.expm1(math.log(httkv / STARTING_HTTKV) / years)
+    # Compare volumes directly to avoid floating-point boundary drift when
+    # a case sits exactly at a published 1.5/3/4.5/6% class threshold.
+    mic = next((name for limit, name in BOUNDARIES
+                if httkv < STARTING_HTTKV * (1.0 + limit / 100.0) ** years), "1E")
+    output.update({
+        "mayo_class": mic,
+        "estimated_annual_growth_percent": round(growth, 4),
+        "interpretation": (
+            "Imaging prognostic stratum only; not an individual eGFR prediction "
+            "or stand-alone treatment recommendation."
+        ),
+    })
+    return output
 
 
-def process_single(args) -> None:
-    kwargs = vars(args)
-    kwargs.pop("func", None)
-    res = calculate_metrics(**kwargs)
-    print(json.dumps(res, indent=2))
+def process_batch(input_csv, output_csv):
+    """Validate every input row before writing a result CSV."""
+    source, destination = Path(input_csv), Path(output_csv)
+    if not source.is_file():
+        raise FileNotFoundError(f"Input CSV file not found: {source}")
+    if not destination.parent.is_dir():
+        raise FileNotFoundError(f"Output directory does not exist: {destination.parent}")
+    if source.resolve() == destination.resolve():
+        raise ValueError("Input and output CSV paths must differ")
+    with source.open("r", newline="", encoding="utf-8-sig") as stream:
+        reader = csv.DictReader(stream)
+        fields = reader.fieldnames
+        if not fields:
+            raise ValueError("Input CSV file is empty or has no headers")
+        if len(set(fields)) != len(fields):
+            raise ValueError("Duplicate CSV column headers")
+        if "age" not in fields:
+            raise ValueError("Missing required CSV column: age")
+        extra = ["mayo_class", "ht_tkv_ml_per_m", "estimated_annual_growth_percent",
+                 "interpretation"]
+        if any(col in fields for col in extra):
+            raise ValueError("Input CSV contains reserved output columns")
+        rows = []
+        for line, row in enumerate(reader, 2):
+            if None in row:
+                raise ValueError(f"CSV row {line}: too many fields")
+            try:
+                result = calculate_metrics(
+                    age=row["age"],
+                    tkv_ml=row.get("tkv_ml") or None,
+                    height_m=row.get("height_m") or None,
+                    httkv_ml_per_m=row.get("httkv_ml_per_m") or None,
+                    morphology=row.get("morphology") or "typical",
+                )
+            except ValueError as exc:
+                raise ValueError(f"CSV row {line}: {exc}") from exc
+            rows.append({**row, **{k: result[k] for k in extra}})
+    # Keep untrusted identifiers/text from being evaluated as spreadsheet formulas.
+    def safe_cell(value):
+        if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@")):
+            return "'" + value
+        return value
 
-
-def process_batch(input_csv: str, output_csv: str) -> None:
-    import os
-    if not os.path.isfile(input_csv):
-        raise FileNotFoundError(f"Input CSV file not found: {input_csv}")
-
-    output_dir = os.path.dirname(os.path.abspath(output_csv))
-    if output_dir and not os.path.isdir(output_dir):
-        raise FileNotFoundError(f"Output directory does not exist: {output_dir}")
-
-    with open(input_csv, mode="r", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        fieldnames = list(reader.fieldnames or [])
-        if not fieldnames:
-            raise ValueError(f"Input CSV file is empty or has no headers: {input_csv}")
-        rows = list(reader)
-
-    out_fields = fieldnames + ["score", "classification", "clinical_recommendation"]
-    out_rows = []
-
-    for r in rows:
-        calc_res = calculate_metrics(**r)
-        row_dict = dict(r)
-        row_dict["score"] = calc_res["score"]
-        row_dict["classification"] = calc_res["classification"]
-        row_dict["clinical_recommendation"] = calc_res["clinical_recommendation"]
-        out_rows.append(row_dict)
-
-    with open(output_csv, mode="w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=out_fields)
+    with destination.open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.DictWriter(stream, fieldnames=fields + extra)
         writer.writeheader()
-        writer.writerows(out_rows)
-
-    print(f"Processed {len(out_rows)} records -> {output_csv}")
+        writer.writerows({key: safe_cell(value) for key, value in row.items()}
+                         for row in rows)
+    return len(rows)
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Mayo Imaging Classification for ADPKD")
-    subparsers = parser.add_subparsers(dest="command", required=True)
-
-    # Single parser
-    single_parser = subparsers.add_parser("single", help="Evaluate single case")
-    single_parser.add_argument("--v1", type=float, default=10.0, help="Primary parameter")
-    single_parser.add_argument("--v2", type=float, default=5.0, help="Secondary parameter")
-    single_parser.add_argument("--v3", type=float, default=2.0, help="Tertiary parameter")
-    single_parser.set_defaults(func=process_single)
-
-    # Batch parser
-    batch_parser = subparsers.add_parser("batch", help="Process batch CSV")
-    batch_parser.add_argument("-i", "--input", required=True, help="Input CSV")
-    batch_parser.add_argument("-o", "--output", default="results.csv", help="Output CSV")
-
+    parser = argparse.ArgumentParser(description="Mayo ADPKD imaging classification (research/education only)")
+    commands = parser.add_subparsers(dest="command", required=True)
+    single = commands.add_parser("single", help="Classify one imaging measurement")
+    single.add_argument("--age", type=float, required=True, help="Age, 15–80 years")
+    single.add_argument("--tkv-ml", type=float, help="Total kidney volume in mL")
+    single.add_argument("--height-m", type=float, help="Height in meters")
+    single.add_argument("--httkv-ml-per-m", type=float, help="Height-adjusted TKV, mL/m")
+    single.add_argument("--morphology", choices=["typical", "atypical"],
+                        default="typical")
+    batch = commands.add_parser("batch", help="Classify CSV rows")
+    batch.add_argument("-i", "--input", required=True)
+    batch.add_argument("-o", "--output", default="results.csv")
     args = parser.parse_args(argv)
-
-    if args.command == "single":
-        args.func(args)
-    elif args.command == "batch":
-        process_batch(args.input, args.output)
+    try:
+        if args.command == "single":
+            result = calculate_metrics(
+                age=args.age, tkv_ml=args.tkv_ml, height_m=args.height_m,
+                httkv_ml_per_m=args.httkv_ml_per_m, morphology=args.morphology)
+            print(json.dumps(result, indent=2))
+        else:
+            count = process_batch(args.input, args.output)
+            print(f"Processed {count} records -> {args.output}")
+    except (ValueError, FileNotFoundError, OSError) as exc:
+        parser.exit(2, f"error: {exc}\n")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
