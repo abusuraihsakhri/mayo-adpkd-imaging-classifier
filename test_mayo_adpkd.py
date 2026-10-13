@@ -16,6 +16,15 @@ def test_mayo_classes_against_published_growth_bands(growth, expected):
     assert result["estimated_annual_growth_percent"] == pytest.approx(growth, abs=0.0001)
 
 
+@pytest.mark.parametrize("growth,expected", [
+    (1.5, "1B"), (3.0, "1C"), (4.5, "1D"), (6.0, "1E"),
+])
+def test_exact_mayo_class_boundaries(growth, expected):
+    age = 40
+    httkv = 150 * (1 + growth / 100) ** age
+    assert calculate_metrics(age=age, httkv_ml_per_m=httkv)["mayo_class"] == expected
+
+
 def test_volume_and_height_equivalent_to_httkv():
     direct = calculate_metrics(age=40, httkv_ml_per_m=800)
     derived = calculate_metrics(age=40, tkv_ml=1440, height_m=1.8)
