@@ -65,7 +65,10 @@ def calculate_metrics(*, age, tkv_ml=None, height_m=None,
 
     # HtTKV = 150 × (1 + growth_fraction) ** age.
     growth = 100.0 * math.expm1(math.log(httkv / STARTING_HTTKV) / years)
-    mic = next((name for limit, name in BOUNDARIES if growth < limit), "1E")
+    # Compare volumes directly to avoid floating-point boundary drift when
+    # a case sits exactly at a published 1.5/3/4.5/6% class threshold.
+    mic = next((name for limit, name in BOUNDARIES
+                if httkv < STARTING_HTTKV * (1.0 + limit / 100.0) ** years), "1E")
     output.update({
         "mayo_class": mic,
         "estimated_annual_growth_percent": round(growth, 4),
